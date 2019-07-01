@@ -20,11 +20,11 @@ window.onYouTubeIframeAPIReady = () => {
 
 let stop = false;
 
-const rec_load = chanel_id => {
+const rec_load = channel_id => {
     return new Promise((resolve) => {
         let videos = [];
         let load = next_page => {
-            let params = {chanelId: chanel_id};
+            let params = {channelId: channel_id};
             if (next_page) params['pageToken'] = next_page;
             request(params).then(data => {
                 videos = Array.from(new Set(videos.concat(data)));
@@ -39,18 +39,18 @@ const rec_load = chanel_id => {
     })
 };
 
-const get_chanel_videos = chanel_id => {
+const get_chanel_videos = channel_id => {
     let chanel_videos = [];
     return new Promise((resolve) => {
-        if (localStorage.getItem(chanel_id)) chanel_videos = JSON.parse(localStorage.getItem(chanel_id));
+        if (localStorage.getItem(channel_id)) chanel_videos = JSON.parse(localStorage.getItem(channel_id));
         if (!chanel_videos.length) {
-            rec_load(chanel_id).then(data => {
-                localStorage.setItem(chanel_id, data);
+            rec_load(channel_id).then(data => {
+                localStorage.setItem(channel_id, data);
                 resolve(data);
             });
-        } else request({chanelId: chanel_id}).then(data => {
+        } else request({chanelId: channel_id}).then(data => {
             chanel_videos = Array.from(new Set(chanel_videos.concat(data)));
-            localStorage.setItem(chanel_id, chanel_videos);
+            localStorage.setItem(channel_id, chanel_videos);
             resolve(chanel_videos);
         }, r => {
             console.error('error', r);
@@ -67,10 +67,10 @@ const random_video = (arr) => {
 
 const open_random_video = async (event) => {
     event.preventDefault();
-    let chanel_id = document.getElementById('chanel_id').value;
-    if (chanel_id) {
-        chanel_id = validYT(chanel_id) ? await getYoutubeChannelId(chanel_id) : chanel_id;
-        get_chanel_videos(chanel_id).then(videos => {
+    let channel_id = document.getElementById('channel_id').value;
+    if (channel_id) {
+        channel_id = validYT(channel_id) ? await getYoutubeChannelId(channel_id) : channel_id;
+        get_chanel_videos(channel_id).then(videos => {
             player.loadVideoById(random_video(videos))
         })
     }
