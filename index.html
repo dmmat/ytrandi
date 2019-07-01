@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title>YTrandI - random video from youtube chanel</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -16,9 +17,10 @@
                onkeydown="update_key()"
                placeholder="youtube api key"
                aria-label="api key">
+        <a target="_blank" href="https://console.developers.google.com/apis/library/youtube.googleapis.com"> get api key</a>
     </form>
-            <br>
 
+    <hr>
     <form onsubmit="return open_random_video(event)" class="form-inline mt-2 mt-md-0 col-12">
         <input id="chanel_id" class="form-control mr-sm-2 col-10" type="text" placeholder="chanel id or chanel url"
                aria-label="chanel id or chanel url">
