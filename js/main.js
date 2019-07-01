@@ -1,4 +1,4 @@
-const base_url = `https://www.googleapis.com/youtube/v3/search`;
+const base_url = `https://www.googleapis.com/youtube/v3/playlistItems`;
 const key_input = document.getElementById('key');
 const base_params = {
     key: localStorage.getItem("api_key") || "",
@@ -6,6 +6,7 @@ const base_params = {
     maxResults: 50,
     order: 'date'
 };
+let playlist_id;
 let player;
 
 window.onYouTubeIframeAPIReady = () => {
@@ -25,13 +26,11 @@ window.onYouTubeIframeAPIReady = () => {
 };
 
 
-let stop = false;
-
-const rec_load = channel_id => {
+const rec_load = async () => {
     return new Promise((resolve) => {
         let videos = [];
         let load = next_page => {
-            let params = {channelId: channel_id};
+            let params = {playlistId: playlist_id};
             if (next_page) params['pageToken'] = next_page;
             request(params).then(data => {
                 videos = Array.from(new Set(videos.concat(data.items)));
@@ -46,30 +45,39 @@ const rec_load = channel_id => {
     })
 };
 
-const get_chanel_videos = channel_id => {
-    let chanel_videos = [];
+const get_chanel_videos = async channel_id => {
+    let channel_videos = [];
+    await getPlaylistId(channel_id);
     return new Promise((resolve) => {
-        if (localStorage.getItem(channel_id)) chanel_videos = JSON.parse(localStorage.getItem(channel_id));
-        if (!chanel_videos.length) {
+        if (localStorage.getItem(`c_id:${channel_id}`)) channel_videos = JSON.parse(localStorage.getItem(`c_id:${channel_id}`));
+        if (!channel_videos.length) {
             rec_load(channel_id).then(data => {
-                localStorage.setItem(channel_id, JSON.stringify(data));
+                localStorage.setItem(`c_id:${channel_id}`, JSON.stringify(data));
+                localStorage.setItem(`c_up:${channel_id}`, new Date().toDateString());
                 resolve(data);
             });
-        } else request({channelId: channel_id}).then(data => {
-            chanel_videos = Array.from(new Set(chanel_videos.concat(data.items)));
-            localStorage.setItem(channel_id, JSON.stringify(chanel_videos));
-            resolve(chanel_videos);
-        }, r => {
-            console.error('error', r);
-            resolve(chanel_videos);
-        });
+        } else {
+            if (localStorage.getItem(`c_up:${channel_id}`) === new Date().toDateString())
+                resolve(channel_videos);
+            else request({playlistId: playlist_id}).then(data => {
+                console.log('load new videos');
+                channel_videos = Array.from(new Set(channel_videos.concat(data.items)));
+                localStorage.setItem(`c_id:${channel_id}`, JSON.stringify(channel_videos));
+                localStorage.setItem(`c_up:${channel_id}`, new Date().toDateString());
+                resolve(channel_videos);
+            }, r => {
+                console.error('error', r);
+                resolve(channel_videos);
+            });
+        }
     });
 };
 
 const random_video = (arr) => {
     const max = arr.length;
     const random = ~~(Math.random() * (max - 1));
-    return arr[random]['id']['videoId'];
+    if (arr[random]) return arr[random]['snippet']['resourceId']['videoId'];
+    else return '';
 };
 
 const open_random_video = async (event) => {
@@ -77,9 +85,7 @@ const open_random_video = async (event) => {
     let channel_id = document.getElementById('channel_id').value;
     if (channel_id) {
         channel_id = validYT(channel_id) ? await getYoutubeChannelId(channel_id) : channel_id;
-        get_chanel_videos(channel_id).then(videos => {
-            player.loadVideoById(random_video(videos))
-        })
+        player.loadVideoById(random_video(await get_chanel_videos(channel_id)));
     }
     return false;
 };
@@ -99,12 +105,21 @@ async function getYoutubeChannelId(url) {
     if (!id) return false;
 
     if (username) {
-        let url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&forUsername=${username}&key=${base_params.key}`;
+        let url = `https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${username}&key=${base_params.key}`;
         let body = await http({url: url});
         if (body && body.items && body.items.length) id = body.items[0].id;
     }
 
     return id;
+}
+
+async function getPlaylistId(channel_id) {
+    playlist_id = localStorage.getItem(`cplid:${channel_id}`)
+        || await http({
+            url: ` https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channel_id}&key=${base_params.key}`
+        })['items'][0]['contentDetails']['relatedPlaylists']['uploads'];
+    localStorage.setItem(`cplid:${channel_id}`, playlist_id);
+    return playlist_id;
 }
 
 const http = obj => {
