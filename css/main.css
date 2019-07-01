@@ -1,0 +1,27 @@
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+    background-color: #000000;
+}
+
+body > .container {
+    padding: 60px 15px 0;
+}
+
+code {
+    font-size: 80%;
+}
+
+.video-container iframe,
+.video-container object,
+.video-container embed {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
