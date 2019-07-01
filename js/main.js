@@ -14,7 +14,13 @@ window.onYouTubeIframeAPIReady = () => {
     player = new YT.Player('player', {
         height: '600',
         width: '1200',
-        events: {onReady: e => e.target.playVideo()}
+        events: {
+            onReady: e => e.target.playVideo(),
+            onStateChange: (e) => {
+                if (e.data === 0) open_random_video();
+            }
+        },
+
     });
 };
 
@@ -49,8 +55,7 @@ const get_chanel_videos = channel_id => {
                 localStorage.setItem(channel_id, JSON.stringify(data));
                 resolve(data);
             });
-        }
-        else request({channelId: channel_id}).then(data => {
+        } else request({channelId: channel_id}).then(data => {
             chanel_videos = Array.from(new Set(chanel_videos.concat(data.items)));
             localStorage.setItem(channel_id, JSON.stringify(chanel_videos));
             resolve(chanel_videos);
@@ -68,7 +73,7 @@ const random_video = (arr) => {
 };
 
 const open_random_video = async (event) => {
-    event.preventDefault();
+    if (event) event.preventDefault();
     let channel_id = document.getElementById('channel_id').value;
     if (channel_id) {
         channel_id = validYT(channel_id) ? await getYoutubeChannelId(channel_id) : channel_id;
