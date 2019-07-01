@@ -92,7 +92,7 @@ async function getYoutubeChannelId(url) {
     if (!id) return false;
 
     if (username) {
-        let url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&forUsername=${username}&key=${key}`;
+        let url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&forUsername=${username}&key=${base_params.key}`;
         let body = await http({url: url});
         if (body && body.items && body.items.length) id = body.items[0].id;
     }
