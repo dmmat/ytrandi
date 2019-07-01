@@ -3,7 +3,8 @@ const key_input = document.getElementById('key');
 const base_params = {
     key: localStorage.getItem("api_key") || "",
     part: 'snippet',
-    maxResults: 50
+    maxResults: 50,
+    order: 'date'
 };
 let player;
 
@@ -27,7 +28,7 @@ const rec_load = channel_id => {
             let params = {channelId: channel_id};
             if (next_page) params['pageToken'] = next_page;
             request(params).then(data => {
-                videos = Array.from(new Set(videos.concat(data)));
+                videos = Array.from(new Set(videos.concat(data.items)));
                 if (videos.length < data.pageInfo.totalResults) load(data.nextPageToken);
                 else resolve(videos);
             }, data => {
@@ -45,12 +46,13 @@ const get_chanel_videos = channel_id => {
         if (localStorage.getItem(channel_id)) chanel_videos = JSON.parse(localStorage.getItem(channel_id));
         if (!chanel_videos.length) {
             rec_load(channel_id).then(data => {
-                localStorage.setItem(channel_id, data);
+                localStorage.setItem(channel_id, JSON.stringify(data));
                 resolve(data);
             });
-        } else request({chanelId: channel_id}).then(data => {
-            chanel_videos = Array.from(new Set(chanel_videos.concat(data)));
-            localStorage.setItem(channel_id, chanel_videos);
+        }
+        else request({channelId: channel_id}).then(data => {
+            chanel_videos = Array.from(new Set(chanel_videos.concat(data.items)));
+            localStorage.setItem(channel_id, JSON.stringify(chanel_videos));
             resolve(chanel_videos);
         }, r => {
             console.error('error', r);
