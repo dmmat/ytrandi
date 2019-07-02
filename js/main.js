@@ -51,11 +51,13 @@ const get_chanel_videos = async channel_id => {
     return new Promise((resolve) => {
         if (localStorage.getItem(`c_id:${channel_id}`)) channel_videos = JSON.parse(localStorage.getItem(`c_id:${channel_id}`));
         if (!channel_videos.length) {
+            switch_loader(true);
             rec_load(channel_id).then(data => {
                 localStorage.setItem(`c_id:${channel_id}`, JSON.stringify(data));
                 localStorage.setItem(`c_up:${channel_id}`, new Date().toDateString());
                 display_cached_channels();
                 resolve(data);
+                switch_loader(false);
             });
         } else {
             if (localStorage.getItem(`c_up:${channel_id}`) === new Date().toDateString())
@@ -83,6 +85,7 @@ const random_video = (arr) => {
 
 const open_random_video = async (event) => {
     if (event) event.preventDefault();
+    if (loading) return false;
     let channel_id = document.getElementById('channel_id').value;
     if (channel_id) {
         channel_id = validYT(channel_id) ? await getYoutubeChannelId(channel_id) : channel_id;
@@ -190,5 +193,12 @@ const display_cached_channels = () => {
         button.onclick = () => (channel_id_el.value = channel.id) && open_random_video();
         destination.append(button);
     });
+};
 
+let loading = false;
+
+const switch_loader = (state) => {
+    const button = document.getElementById('random-video');
+    loading = state;
+    button.innerText = loading ? "loading..." : "RANDOM VIDEO";
 };
