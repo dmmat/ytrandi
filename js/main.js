@@ -21,8 +21,8 @@ window.onYouTubeIframeAPIReady = () => {
                 if (e.data === 0) open_random_video();
             }
         },
-
     });
+    display_cached_channels();
 };
 
 
@@ -54,6 +54,7 @@ const get_chanel_videos = async channel_id => {
             rec_load(channel_id).then(data => {
                 localStorage.setItem(`c_id:${channel_id}`, JSON.stringify(data));
                 localStorage.setItem(`c_up:${channel_id}`, new Date().toDateString());
+                display_cached_channels();
                 resolve(data);
             });
         } else {
@@ -114,10 +115,14 @@ async function getYoutubeChannelId(url) {
 }
 
 async function getPlaylistId(channel_id) {
-    playlist_id = localStorage.getItem(`cplid:${channel_id}`)
-        || await http({
+    if (localStorage.getItem(`cplid:${channel_id}`))
+        playlist_id = localStorage.getItem(`cplid:${channel_id}`);
+    else {
+        let playlistID = await http({
             url: ` https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channel_id}&key=${base_params.key}`
-        })['items'][0]['contentDetails']['relatedPlaylists']['uploads'];
+        });
+        playlist_id = playlistID['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+    }
     localStorage.setItem(`cplid:${channel_id}`, playlist_id);
     return playlist_id;
 }
@@ -157,4 +162,33 @@ const validYT = url => {
 const update_key = () => {
     base_params.key = key_input.value;
     localStorage.setItem('api_key', base_params.key);
+};
+
+let channels_in_storage;
+
+const get_cached_chanels = () => {
+    let cached_channels = Object.keys(localStorage).filter(x => x.indexOf('c_id:') > -1);
+    channels_in_storage = [];
+    cached_channels.forEach(x => {
+        let lc_item = JSON.parse(localStorage[x]);
+        channels_in_storage.push({
+            id: lc_item[0]['snippet']['channelId'],
+            title: lc_item[0]['snippet']['channelTitle']
+        })
+    });
+    return channels_in_storage;
+};
+
+const display_cached_channels = () => {
+    const destination = document.getElementById('channels');
+    const channel_id_el = document.getElementById('channel_id');
+    destination.innerHTML = "";
+    get_cached_chanels().forEach(channel => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-outline-primary';
+        button.innerText = channel.title;
+        button.onclick = () => (channel_id_el.value = channel.id) && open_random_video();
+        destination.append(button);
+    });
+
 };

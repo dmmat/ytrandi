@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YTrandI - random video from youtube chanel</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -11,22 +12,25 @@
 
 <!-- Begin page content -->
 <main role="main" class="container">
-    <form class="form-inline mt-2 mt-md-0 col-12">
-        <input id="key" class="form-control mr-sm-2 col-10" type="text"
+    <form class="form-inline col-12">
+        <input id="key" class="form-control col-md-9" type="text"
                onchange="update_key()"
                onkeydown="update_key()"
                placeholder="youtube api key"
                aria-label="api key">
-        <a target="_blank" href="https://console.developers.google.com/apis/library/youtube.googleapis.com"> get api key</a>
+        <a class="col-md-2" target="_blank" href="https://console.developers.google.com/apis/library/youtube.googleapis.com"> get api key</a>
     </form>
 
     <hr>
-    <form onsubmit="return open_random_video(event)" class="form-inline mt-2 mt-md-0 col-12">
-        <input id="channel_id" class="form-control mr-sm-2 col-10" type="text" placeholder="chanel id or chanel url"
+    <form onsubmit="return open_random_video(event)" class="form-inline col-12">
+        <input id="channel_id" class="form-control mr-sm-2 col-md-9" type="text" placeholder="chanel id or chanel url"
                aria-label="chanel id or chanel url">
-        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">RANDOM VIDEO</button>
+        <button class="btn btn-outline-success my-2 my-sm-0 col-md-2" type="submit">RANDOM VIDEO</button>
     </form>
     <br>
+    <div id="channels" class="form-inline col-12">
+    </div>
+    <p></p>
     <div id="player"></div>
 
 </main>
