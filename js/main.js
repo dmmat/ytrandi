@@ -1,4 +1,4 @@
-const base_url = `https://www.googleapis.com/youtube/v3/playlistItems`;
+const base_url = `https://yt.lemnoslife.com/playlistItems`;
 const key_input = document.getElementById('key');
 const base_params = {
     key: localStorage.getItem("api_key") || "",
@@ -34,7 +34,7 @@ const rec_load = async () => {
             if (next_page) params['pageToken'] = next_page;
             request(params).then(data => {
                 videos = Array.from(new Set(videos.concat(data.items)));
-                if (videos.length < data.pageInfo.totalResults) load(data.nextPageToken);
+                if (data.items.length === 100) load(data.nextPageToken);
                 else resolve(videos);
             }, data => {
                 console.warn(data);
@@ -45,28 +45,30 @@ const rec_load = async () => {
     })
 };
 
-const get_chanel_videos = async channel_id => {
+const get_chanel_videos = async channel => {
     let channel_videos = [];
-    await getPlaylistId(channel_id);
+    await getPlaylistId(channel.id);
     return new Promise((resolve) => {
-        if (localStorage.getItem(`c_id:${channel_id}`)) channel_videos = JSON.parse(localStorage.getItem(`c_id:${channel_id}`));
+        if (localStorage.getItem(`cc_id:${channel.id}`)) channel_videos = JSON.parse(localStorage.getItem(`cc_id:${channel.id}`));
         if (!channel_videos.length) {
             switch_loader(true);
-            rec_load(channel_id).then(data => {
-                localStorage.setItem(`c_id:${channel_id}`, JSON.stringify(data));
-                localStorage.setItem(`c_up:${channel_id}`, new Date().toDateString());
+            rec_load(channel.id).then(data => {
+                localStorage.setItem(`cc_id:${channel.id}`, JSON.stringify(data));
+                localStorage.setItem(`cc_up:${channel.id}`, new Date().toDateString());
+                localStorage.setItem(`cc_name:${channel.id}`, channel.username);
                 display_cached_channels();
                 resolve(data);
                 switch_loader(false);
             });
         } else {
-            if (localStorage.getItem(`c_up:${channel_id}`) === new Date().toDateString())
+            if (localStorage.getItem(`cc_up:${channel.id}`) === new Date().toDateString())
                 resolve(channel_videos);
             else request({playlistId: playlist_id}).then(data => {
                 console.log('load new videos');
                 channel_videos = Array.from(new Set(channel_videos.concat(data.items)));
-                localStorage.setItem(`c_id:${channel_id}`, JSON.stringify(channel_videos));
-                localStorage.setItem(`c_up:${channel_id}`, new Date().toDateString());
+                localStorage.setItem(`cc_id:${channel.id}`, JSON.stringify(channel_videos));
+                localStorage.setItem(`cc_up:${channel.id}`, new Date().toDateString());
+                localStorage.setItem(`cc_name:${channel.username}`, channel.username);
                 resolve(channel_videos);
             }, r => {
                 console.error('error', r);
@@ -88,52 +90,68 @@ const open_random_video = async (event) => {
     if (loading) return false;
     let channel_id = document.getElementById('channel_id').value;
     if (channel_id) {
-        channel_id = validYT(channel_id) ? await getYoutubeChannelId(channel_id) : channel_id;
+        channel_id = validYT(channel_id) ? await getYoutubeChannelIdNew(channel_id) : {id: channel_id};
         player.loadVideoById(random_video(await get_chanel_videos(channel_id)));
     }
     return false;
 };
 
-async function getYoutubeChannelId(url) {
-    let id = '';
-    let username;
-    url = url.replace(/([><])/gi, '').split(/(\/channel\/|\/user\/)/);
-
-    if (url[2] !== undefined) {
-        id = url[2].split(/[^0-9a-z_-]/i);
-        id = id[0];
-    }
-
-    if (/\/user\//.test(url)) username = id;
-
-    if (!id) return false;
-
-    if (username) {
-        let url = `https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${username}&key=${base_params.key}`;
+async function getYoutubeChannelIdNew(url) {
+    // "channelId\":\s\"(\w+)"
+    let username = url.match(/(@\w+)/)
+    if (username && username[1]) {
+        username = username[1]
+        let url = `https://yt.lemnoslife.com/channels?part=community&handle=${username}`;
         let body = await http({url: url});
         if (body && body.items && body.items.length) id = body.items[0].id;
+        return {id, username};
+    } else {
+        throw new Error('cannot recognize youtube link')
     }
 
-    return id;
 }
+//
+// async function getYoutubeChannelId(url) {
+//     let id = '';
+//     let username;
+//
+//     url = url.replace(/([><])/gi, '').split(/(\/channel\/|\/user\/)/);
+//
+//     if (url[2] !== undefined) {
+//         id = url[2].split(/[^0-9a-z_-]/i);
+//         id = id[0];
+//     }
+//
+//     if (/\/user\//.test(url)) username = id;
+//
+//     if (!id) return false;
+//
+//     if (username) {
+//         let url = `https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${username}&key=${base_params.key}`;
+//         let body = await http({url: url});
+//         if (body && body.items && body.items.length) id = body.items[0].id;
+//     }
+//
+//     return id;
+// }
 
 async function getPlaylistId(channel_id) {
-    if (localStorage.getItem(`cplid:${channel_id}`))
-        playlist_id = localStorage.getItem(`cplid:${channel_id}`);
+    if (localStorage.getItem(`ccplid:${channel_id}`))
+        playlist_id = localStorage.getItem(`ccplid:${channel_id}`);
     else {
         let playlistID = await http({
-            url: ` https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channel_id}&key=${base_params.key}`
+            url: `https://yt.lemnoslife.com/noKey/channels?part=contentDetails&id=${channel_id}`
         });
         playlist_id = playlistID['items'][0]['contentDetails']['relatedPlaylists']['uploads']
     }
-    localStorage.setItem(`cplid:${channel_id}`, playlist_id);
+    localStorage.setItem(`ccplid:${channel_id}`, playlist_id);
     return playlist_id;
 }
 
 const http = obj => {
     return new Promise((resolve, reject) => {
         let xhr = new XMLHttpRequest();
-        xhr.open(obj.method || "GET", obj.url);
+        xhr.open(obj.method || "GET", obj.url, true);
         if (obj.headers) {
             Object.keys(obj.headers).forEach(key => {
                 xhr.setRequestHeader(key, obj.headers[key]);
@@ -147,7 +165,7 @@ const http = obj => {
             }
         };
         xhr.onerror = () => reject(xhr.statusText);
-        xhr.send(obj.body);
+        xhr.send();
     });
 };
 
@@ -165,18 +183,19 @@ const validYT = url => {
 const update_key = () => {
     base_params.key = key_input.value;
     localStorage.setItem('api_key', base_params.key);
+    addKey(base_params.key)
 };
 
 let channels_in_storage;
 
 const get_cached_chanels = () => {
-    let cached_channels = Object.keys(localStorage).filter(x => x.indexOf('c_id:') > -1);
+    let cached_channels = Object.keys(localStorage).filter(x => x.indexOf('cc_id:') > -1);
     channels_in_storage = [];
     cached_channels.forEach(x => {
         let lc_item = JSON.parse(localStorage[x]);
         channels_in_storage.push({
-            id: lc_item[0]['snippet']['channelId'],
-            title: lc_item[0]['snippet']['channelTitle']
+            id: x.replace("cc_id:", ""),
+            title: localStorage[x.replace("cc_id:", "cc_name:")]
         })
     });
     return channels_in_storage;
@@ -202,3 +221,8 @@ const switch_loader = (state) => {
     loading = state;
     button.innerText = loading ? "loading..." : "RANDOM VIDEO";
 };
+
+
+async function addKey(key) {
+    return await http({url: "https://yt.lemnoslife.com/addKey.php?key=" + key})
+}

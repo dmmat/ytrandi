@@ -12,18 +12,11 @@
 
 <!-- Begin page content -->
 <main role="main" class="container">
-    <form class="form-inline col-12">
-        <input id="key" class="form-control col-md-9" type="text"
-               onchange="update_key()"
-               onkeydown="update_key()"
-               placeholder="youtube api key"
-               aria-label="api key">
-        <a class="col-md-2" target="_blank" href="https://console.developers.google.com/apis/library/youtube.googleapis.com"> get api key</a>
-    </form>
+
 
     <hr>
     <form onsubmit="return open_random_video(event)" class="form-inline col-12">
-        <input id="channel_id" class="form-control mr-sm-2 col-md-9" type="text" placeholder="chanel id or chanel url"
+        <input id="channel_id" class="form-control mr-sm-2 col-md-9" type="text" placeholder="chanel url"
                aria-label="chanel id or chanel url">
         <button id="random-video" class="btn btn-outline-success my-2 my-sm-0 col-md-2" type="submit">RANDOM VIDEO</button>
     </form>
@@ -32,6 +25,17 @@
     </div>
     <p></p>
     <div id="player"></div>
+    <p></p>
+
+    <a href="https://yt.lemnoslife.com/"> ThX FOR https://yt.lemnoslife.com/ service </a>
+    <p style="color: white"> You can add yours API KEY to Base (optional)</p>
+    <form class="form-inline col-12" >
+        <input id="key" class="form-control col-md-9" type="text"
+               onchange="update_key()"
+               placeholder="youtube api key"
+               aria-label="api key">
+        <a class="col-md-2" target="_blank" href="https://console.developers.google.com/apis/library/youtube.googleapis.com"> get api key</a>
+    </form>
 
 </main>
 <script src="js/main.js"></script>
