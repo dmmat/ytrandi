@@ -4,12 +4,11 @@ html {
 }
 
 body {
-    margin-bottom: 60px;
     background-color: #000000;
 }
 
 body > .container {
-    padding: 60px 15px 0;
+    padding: 15px 0;
 }
 
 code {

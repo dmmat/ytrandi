@@ -45,7 +45,7 @@ const rec_load = async () => {
     })
 };
 
-const get_chanel_videos = async channel => {
+const get_channel_videos = async channel => {
     let channel_videos = [];
     await getPlaylistId(channel.id);
     return new Promise((resolve) => {
@@ -91,7 +91,7 @@ const open_random_video = async (event) => {
     let channel_id = document.getElementById('channel_id').value;
     if (channel_id) {
         channel_id = validYT(channel_id) ? await getYoutubeChannelIdNew(channel_id) : {id: channel_id};
-        player.loadVideoById(random_video(await get_chanel_videos(channel_id)));
+        player.loadVideoById(random_video(await get_channel_videos(channel_id)));
     }
     return false;
 };
@@ -110,30 +110,6 @@ async function getYoutubeChannelIdNew(url) {
     }
 
 }
-//
-// async function getYoutubeChannelId(url) {
-//     let id = '';
-//     let username;
-//
-//     url = url.replace(/([><])/gi, '').split(/(\/channel\/|\/user\/)/);
-//
-//     if (url[2] !== undefined) {
-//         id = url[2].split(/[^0-9a-z_-]/i);
-//         id = id[0];
-//     }
-//
-//     if (/\/user\//.test(url)) username = id;
-//
-//     if (!id) return false;
-//
-//     if (username) {
-//         let url = `https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${username}&key=${base_params.key}`;
-//         let body = await http({url: url});
-//         if (body && body.items && body.items.length) id = body.items[0].id;
-//     }
-//
-//     return id;
-// }
 
 async function getPlaylistId(channel_id) {
     if (localStorage.getItem(`ccplid:${channel_id}`))
@@ -188,7 +164,7 @@ const update_key = () => {
 
 let channels_in_storage;
 
-const get_cached_chanels = () => {
+const get_cached_channels = () => {
     let cached_channels = Object.keys(localStorage).filter(x => x.indexOf('cc_id:') > -1);
     channels_in_storage = [];
     cached_channels.forEach(x => {
@@ -205,7 +181,7 @@ const display_cached_channels = () => {
     const destination = document.getElementById('channels');
     const channel_id_el = document.getElementById('channel_id');
     destination.innerHTML = "";
-    get_cached_chanels().forEach(channel => {
+    get_cached_channels().forEach(channel => {
         const button = document.createElement('button');
         button.className = 'btn btn-outline-primary';
         button.innerText = channel.title;
