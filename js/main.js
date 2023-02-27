@@ -10,11 +10,10 @@ let playlist_id;
 let player;
 
 window.onYouTubeIframeAPIReady = () => {
-    console.log('ready to use');
     if (base_params.key) key_input.value = base_params.key;
     player = new YT.Player('player', {
-        height: '600',
-        width: '1200',
+        height: '360',
+        width: '100%',
         events: {
             onReady: e => e.target.playVideo(),
             onStateChange: (e) => {
