@@ -91,6 +91,7 @@ const open_random_video = async (event) => {
     if (channel_id) {
         channel_id = validYT(channel_id) ? await getYoutubeChannelIdNew(channel_id) : {id: channel_id};
         player.loadVideoById(random_video(await get_channel_videos(channel_id)));
+        make_visible_skip_button(10000)
     }
     return false;
 };
@@ -197,7 +198,19 @@ const switch_loader = (state) => {
     button.innerText = loading ? "loading..." : "RANDOM VIDEO";
 };
 
-
 async function addKey(key) {
     return await http({url: "https://yt.lemnoslife.com/addKey.php?key=" + key})
 }
+
+const show_key_input = () => {
+    document.getElementById("ApiKeyForm").style.display = 'block';
+}
+
+const make_visible_skip_button = (timeout = 5000) => {
+    const button = document.getElementById('skip-video');
+    button.style.display = 'block';
+    setTimeout(() => {
+        button.style.display = 'none';
+    }, timeout)
+}
+

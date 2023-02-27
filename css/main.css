@@ -5,10 +5,28 @@ html {
 
 body {
     background-color: #000000;
+    background-image: linear-gradient(to bottom right, #00310a, #003739, #333);
+    color: #a5c2c7;
 }
 
 body > .container {
-    padding: 15px 0;
+    padding: 20px 0;
+}
+
+input[type="text"]{
+    background: black;
+    color: #98d7a4;
+    border: 1px solid #28a745;
+    border-radius: 0;
+}
+
+button{
+    border-radius: 0!important;
+}
+
+input[type="text"]:focus{
+    background: black;
+    color: #98d7a4;
 }
 
 code {
@@ -40,4 +58,30 @@ code {
         height: 360px;
         width: 100%;
     }
+}
+
+
+#player-container{
+    position: relative;
+}
+
+#addApiKey{
+    cursor: pointer;
+    color: #89c0ff;
+}
+
+#ApiKeyForm{
+    display: none;
+}
+
+#player{
+     z-index: 0;
+}
+
+#skip-video{
+    position: absolute;
+    bottom: 50%;
+    right: 0;
+    z-index: 999999999;
+    display: none;
 }

@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YTrandI - random video from youtube channel</title>
-    <meta name="description" content="Experience the thrill of discovering new and exciting content every time with YTrandI - our service lets you view a random video from any YouTube channel of your choosing. Try it out now and let us surprise you!" />
-    <meta name="keywords" content="YTrandI, random video, YouTube, service, discovery" />
+    <meta name="description"
+          content="Experience the thrill of discovering new and exciting content every time with YTrandI - our service lets you view a random video from any YouTube channel of your choosing. Try it out now and let us surprise you!"/>
+    <meta name="keywords" content="YTrandI, random video, YouTube, service, discovery"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -15,23 +16,25 @@
 
 <!-- Begin page content -->
 <main role="main" class="container">
-    <hr>
     <form onsubmit="return open_random_video(event)" class="form-inline col-12">
-        <input id="channel_id" class="form-control mr-sm-2 col-md-9" type="text" placeholder="channel url"
+        <input id="channel_id" class="form-control mr-md-2 col-md-9 col-sm-12" type="text" placeholder="channel url"
                aria-label="channel id or channel url">
-        <button id="random-video" class="btn btn-outline-success my-2 my-sm-0 col-md-2" type="submit">RANDOM VIDEO
+        <button id="random-video" class="btn btn-outline-success my-2  col-md-2" type="submit">RANDOM VIDEO
         </button>
     </form>
-    <br>
     <div id="channels" class="form-inline col-12">
     </div>
-    <p></p>
-    <div id="player"></div>
-    <p></p>
-
-    <a href="https://yt.lemnoslife.com/"> ThX FOR https://yt.lemnoslife.com/ service </a>
-    <p style="color: white"> You can add yours API KEY to Base (optional)</p>
-    <form class="form-inline col-12">
+    <div id="player-container">
+        <button id="skip-video" onclick="open_random_video(event)" class="btn btn-outline-primary my-2 my-sm-0 col-md-2" type="button"> skip video</button>
+        <div id="player"></div>
+    </div>
+    <p>
+        ThX FOR <a href="https://yt.lemnoslife.com/"> https://yt.lemnoslife.com/ service </a> for non api-key api
+    </p>
+    <p> You can
+        <span id="addApiKey" onclick="show_key_input()"> add yours API KEY </span>
+        to Base (optional)</p>
+    <form class="form-inline col-12" id="ApiKeyForm">
         <input id="key" class="form-control col-md-9" type="text"
                onchange="update_key()"
                placeholder="youtube api key"
