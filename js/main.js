@@ -206,10 +206,12 @@ const show_key_input = () => {
     document.getElementById("ApiKeyForm").style.display = 'block';
 }
 
+let prev_timeout;
 const make_visible_skip_button = (timeout = 5000) => {
     const button = document.getElementById('skip-video');
     button.style.display = 'block';
-    setTimeout(() => {
+    if (prev_timeout) clearTimeout(prev_timeout)
+    prev_timeout = setTimeout(() => {
         button.style.display = 'none';
     }, timeout)
 }
