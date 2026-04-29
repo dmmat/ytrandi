@@ -44,7 +44,22 @@
         </form>
     </section>
 
-    <section id="status-bar" class="status-bar" hidden></section>
+    <section id="status-bar" class="status-bar" hidden>
+        <span id="status-text"></span>
+        <button id="status-details-btn" class="link-btn" type="button" hidden>Show details</button>
+    </section>
+
+    <section id="key-banner" class="key-banner" hidden>
+        <div class="key-banner-text">
+            <strong>All public APIs are unreachable right now.</strong>
+            <span>Add your own free YouTube Data API key (5-min setup) for a reliable fallback.</span>
+        </div>
+        <div class="key-banner-actions">
+            <a class="btn ghost" target="_blank" rel="noopener"
+               href="https://console.developers.google.com/apis/library/youtube.googleapis.com">Get a key →</a>
+            <button id="key-banner-add" class="btn primary" type="button">I have a key</button>
+        </div>
+    </section>
 
     <section class="channels" aria-label="Saved channels">
         <div class="channels-head">
@@ -97,6 +112,14 @@
                 </label>
             </fieldset>
             <fieldset>
+                <legend>Network</legend>
+                <label class="row">
+                    <input type="checkbox" id="opt-cors-proxy">
+                    <span>Use CORS proxy fallback if direct request fails</span>
+                </label>
+                <p class="muted small">Routes failed requests through public CORS proxies (corsproxy.io, allorigins, codetabs). Disable for stricter privacy.</p>
+            </fieldset>
+            <fieldset>
                 <legend>Cache</legend>
                 <label class="row">
                     <span>Refresh channel videos every</span>
@@ -123,6 +146,23 @@
         </div>
         <footer class="dialog-foot">
             <button class="btn primary" value="save">Save</button>
+        </footer>
+    </form>
+</dialog>
+
+<dialog id="errors-dialog" class="dialog">
+    <form method="dialog" class="dialog-form">
+        <header class="dialog-head">
+            <h3>Recent backend errors</h3>
+            <button class="icon-btn" value="close" aria-label="Close">✕</button>
+        </header>
+        <div class="dialog-body">
+            <p class="muted small">Most recent first. Empty = no failures recorded yet.</p>
+            <pre id="errors-log" class="errors-log"></pre>
+        </div>
+        <footer class="dialog-foot">
+            <button id="errors-clear" class="btn ghost" type="button">Clear</button>
+            <button class="btn" value="close">Close</button>
         </footer>
     </form>
 </dialog>
