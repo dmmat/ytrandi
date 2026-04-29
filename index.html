@@ -1,50 +1,133 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YTrandI - random video from youtube channel</title>
-    <meta name="description"
-          content="Experience the thrill of discovering new and exciting content every time with YTrandI - our service lets you view a random video from any YouTube channel of your choosing. Try it out now and let us surprise you!"/>
-    <meta name="keywords" content="YTrandI, random video, YouTube, service, discovery"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title>YTrandI - random video from any YouTube channel</title>
+    <meta name="description" content="Discover random videos from any YouTube channel. Paste a URL, @handle, channel ID, or just type a name. No API key required."/>
+    <meta name="keywords" content="YTrandI, random video, YouTube, channel, shuffle, discover"/>
+    <meta name="theme-color" content="#0f0f12"/>
     <link rel="stylesheet" href="css/main.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23ff4d4d'/><path d='M12 10l10 6-10 6z' fill='white'/></svg>">
 </head>
 <body>
 
-<!-- Begin page content -->
-<main role="main" class="container">
-    <form onsubmit="return open_random_video(event)" class="form-inline col-12">
-        <input id="channel_id" class="form-control mr-md-2 col-md-9 col-sm-12" type="text" placeholder="channel url"
-               aria-label="channel id or channel url">
-        <button id="random-video" class="btn btn-outline-success my-2  col-md-2" type="submit">RANDOM VIDEO
+<header class="topbar">
+    <div class="brand">
+        <span class="logo" aria-hidden="true">▶</span>
+        <h1>YTrand<span class="accent">I</span></h1>
+    </div>
+    <div class="topbar-actions">
+        <button id="theme-toggle" class="icon-btn" title="Toggle theme (T)" aria-label="Toggle theme">
+            <span class="theme-icon" data-theme-icon="dark">☀</span>
+            <span class="theme-icon" data-theme-icon="light">☾</span>
         </button>
-    </form>
-    <div id="channels" class="form-inline col-12">
+        <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
     </div>
-    <div id="player-container">
-        <button id="skip-video" onclick="open_random_video(event)" class="btn btn-outline-primary my-2 my-sm-0 col-md-2" type="button"> skip video</button>
-        <div id="player"></div>
-    </div>
-    <p>
-        ThX FOR <a href="https://yt.lemnoslife.com/"> https://yt.lemnoslife.com/ service </a> for non api-key api
-    </p>
-    <p> You can
-        <span id="addApiKey" onclick="show_key_input()"> add yours API KEY </span>
-        to Base (optional)</p>
-    <form class="form-inline col-12" id="ApiKeyForm">
-        <input id="key" class="form-control col-md-9" type="text"
-               onchange="update_key()"
-               placeholder="youtube api key"
-               aria-label="api key">
-        <a class="col-md-2" target="_blank"
-           href="https://console.developers.google.com/apis/library/youtube.googleapis.com"> get api key</a>
-    </form>
+</header>
 
+<main class="container">
+    <section class="search-card">
+        <form id="search-form" autocomplete="off">
+            <div class="search-row">
+                <input id="channel-input" type="text" autocomplete="off" spellcheck="false"
+                       placeholder="Paste URL, @handle, channel ID, or type a name…"
+                       aria-label="Channel input">
+                <button id="random-btn" type="submit" class="btn primary">
+                    <span class="btn-label">Random video</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="hint">
+                <kbd>N</kbd> next · <kbd>S</kbd> skip · <kbd>Space</kbd> play/pause · <kbd>M</kbd> mute · <kbd>T</kbd> theme
+            </div>
+        </form>
+    </section>
+
+    <section id="status-bar" class="status-bar" hidden></section>
+
+    <section class="channels" aria-label="Saved channels">
+        <div class="channels-head">
+            <h2>Your channels</h2>
+            <span id="channels-count" class="muted"></span>
+        </div>
+        <div id="channels-list" class="channels-list"></div>
+        <p id="channels-empty" class="muted small">No channels yet. Try one above and it'll show up here.</p>
+    </section>
+
+    <section id="player-section" class="player-section" hidden>
+        <div class="now-playing">
+            <div class="np-text">
+                <span class="np-label">Now playing</span>
+                <span id="np-channel" class="np-channel"></span>
+                <span id="np-title" class="np-title"></span>
+            </div>
+            <div class="np-actions">
+                <button id="skip-btn" class="btn ghost" type="button" title="Next random video (N)">Skip</button>
+                <a id="np-open" class="btn ghost" target="_blank" rel="noopener" title="Open on YouTube">Open ↗</a>
+            </div>
+        </div>
+        <div class="player-wrap">
+            <div id="player"></div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>
+            Random video discovery for YouTube. Frontend-only, no tracking.<br>
+            Powered by public <a href="https://github.com/iv-org/invidious" target="_blank" rel="noopener">Invidious</a> &
+            <a href="https://github.com/TeamPiped/Piped" target="_blank" rel="noopener">Piped</a> instances.
+            Optional fallback to your own YouTube Data API key.
+        </p>
+    </footer>
 </main>
-<script src="js/main.js"></script>
+
+<dialog id="settings-dialog" class="dialog">
+    <form method="dialog" class="dialog-form">
+        <header class="dialog-head">
+            <h3>Settings</h3>
+            <button class="icon-btn" value="cancel" aria-label="Close">✕</button>
+        </header>
+        <div class="dialog-body">
+            <fieldset>
+                <legend>Playback</legend>
+                <label class="row">
+                    <input type="checkbox" id="opt-avoid-watched">
+                    <span>Avoid recently watched videos</span>
+                </label>
+            </fieldset>
+            <fieldset>
+                <legend>Cache</legend>
+                <label class="row">
+                    <span>Refresh channel videos every</span>
+                    <select id="opt-cache-days">
+                        <option value="0">always (no cache)</option>
+                        <option value="1">1 day</option>
+                        <option value="3">3 days</option>
+                        <option value="7">7 days</option>
+                        <option value="30">30 days</option>
+                    </select>
+                </label>
+                <div class="row gap">
+                    <button id="btn-clear-history" type="button" class="btn ghost">Clear watch history</button>
+                    <button id="btn-clear-all" type="button" class="btn ghost danger">Forget everything</button>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>YouTube Data API key (optional)</legend>
+                <p class="muted small">Used as an extra fallback if public instances are down. Stored only in your browser.</p>
+                <input type="text" id="opt-api-key" placeholder="AIza…" spellcheck="false">
+                <a class="muted small" target="_blank" rel="noopener"
+                   href="https://console.developers.google.com/apis/library/youtube.googleapis.com">Get a key →</a>
+            </fieldset>
+        </div>
+        <footer class="dialog-foot">
+            <button class="btn primary" value="save">Save</button>
+        </footer>
+    </form>
+</dialog>
+
 <script src="https://www.youtube.com/iframe_api"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
