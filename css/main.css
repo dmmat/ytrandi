@@ -198,12 +198,64 @@ html[data-theme="light"] .theme-icon[data-theme-icon="light"] { display: inline;
     border-radius: var(--radius-sm);
     font-size: 13.5px;
     color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 .status-bar.error {
     border-left-color: var(--danger);
     color: color-mix(in srgb, var(--danger) 80%, var(--text));
 }
 .status-bar.success { border-left-color: var(--success); }
+
+.link-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    text-decoration: underline;
+}
+.link-btn:hover { color: var(--primary-hover); }
+
+/* ---------- Key suggestion banner ---------- */
+.key-banner {
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--accent) 12%, var(--bg-elev));
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.key-banner-text { display: flex; flex-direction: column; gap: 4px; min-width: 200px; flex: 1 1 280px; }
+.key-banner-text strong { color: var(--text); font-weight: 600; }
+.key-banner-text span { font-size: 13.5px; color: var(--text-dim); }
+.key-banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.key-banner-actions .btn { padding: 8px 14px; font-size: 13.5px; }
+
+/* ---------- Errors dialog ---------- */
+.errors-log {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin: 0;
+    max-height: 360px;
+    overflow: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
 
 /* ---------- Channels ---------- */
 .channels { margin-top: 22px; }

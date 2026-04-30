@@ -5,6 +5,7 @@ import { resolveToChannel, loadChannelVideos } from './resolve.js';
 import {
     settings, apiKey, history, channels, videoCache, clearAll,
 } from './storage.js';
+import { api } from './api.js';
 
 // ---------- DOM refs ----------
 const $ = (sel) => document.querySelector(sel);
@@ -14,6 +15,10 @@ const els = {
     input: $('#channel-input'),
     randomBtn: $('#random-btn'),
     status: $('#status-bar'),
+    statusText: $('#status-text'),
+    statusDetailsBtn: $('#status-details-btn'),
+    keyBanner: $('#key-banner'),
+    keyBannerAdd: $('#key-banner-add'),
     channelsList: $('#channels-list'),
     channelsEmpty: $('#channels-empty'),
     channelsCount: $('#channels-count'),
@@ -28,8 +33,12 @@ const els = {
     optAvoidWatched: $('#opt-avoid-watched'),
     optCacheDays: $('#opt-cache-days'),
     optApiKey: $('#opt-api-key'),
+    optCorsProxy: $('#opt-cors-proxy'),
     btnClearHistory: $('#btn-clear-history'),
     btnClearAll: $('#btn-clear-all'),
+    errorsDialog: $('#errors-dialog'),
+    errorsLog: $('#errors-log'),
+    errorsClear: $('#errors-clear'),
 };
 
 // ---------- App state ----------
@@ -44,16 +53,52 @@ const state = {
 
 // ---------- Status helpers ----------
 let statusTimer;
-function setStatus(text, kind) {
+function setStatus(text, kind, { withDetails = false } = {}) {
     if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
-    if (!text) { els.status.hidden = true; els.status.textContent = ''; els.status.className = 'status-bar'; return; }
+    if (!text) {
+        els.status.hidden = true;
+        els.statusText.textContent = '';
+        els.statusDetailsBtn.hidden = true;
+        els.status.className = 'status-bar';
+        return;
+    }
     els.status.hidden = false;
     els.status.className = 'status-bar' + (kind ? ' ' + kind : '');
-    els.status.textContent = text;
+    els.statusText.textContent = text;
+    els.statusDetailsBtn.hidden = !withDetails;
 }
 function flashStatus(text, kind, ms = 2500) {
     setStatus(text, kind);
     statusTimer = setTimeout(() => setStatus(''), ms);
+}
+
+function showError(err, ctx = 'Something went wrong') {
+    const msg = (err && err.message) ? err.message : String(err || ctx);
+    setStatus(`${ctx}: ${msg}`, 'error', { withDetails: true });
+    maybeShowKeyBanner();
+}
+
+function maybeShowKeyBanner() {
+    if (api.youtube.enabled()) { els.keyBanner.hidden = true; return; }
+    const log = api.getErrorLog();
+    if (!log.length) return;
+    // Show banner only when we've seen failures across both public backends
+    // recently (last 2 minutes).
+    const recent = log.filter(e => Date.now() - e.ts < 120 * 1000);
+    const kinds = new Set(recent.map(e => e.backend));
+    if (kinds.has('invidious') && kinds.has('piped')) {
+        els.keyBanner.hidden = false;
+    }
+}
+
+function renderErrorsLog() {
+    const log = api.getErrorLog();
+    if (!log.length) { els.errorsLog.textContent = '(no errors recorded)'; return; }
+    const lines = log.map(e => {
+        const t = new Date(e.ts).toLocaleTimeString();
+        return `[${t}] ${e.backend}/${e.op} @ ${e.instance}\n         → ${e.message}`;
+    });
+    els.errorsLog.textContent = lines.join('\n\n');
 }
 
 function setLoading(on) {
@@ -202,7 +247,7 @@ function renderChannels() {
                 renderChannels();
             } catch (err) {
                 console.error(err);
-                flashStatus(err.message || 'Failed to load channel', 'error', 4000);
+                showError(err, 'Failed to load channel');
             } finally {
                 setLoading(false);
             }
@@ -216,25 +261,31 @@ async function handleSubmit(rawValue) {
     if (state.isLoading) return;
     const value = (rawValue ?? els.input.value).trim();
     if (!value) {
-        // No input — if there's a current channel, just skip
         if (state.currentChannel) {
             try {
                 setLoading(true);
+                els.keyBanner.hidden = true;
                 await pickAndPlayRandom(state.currentChannel);
             } catch (err) {
-                flashStatus(err.message, 'error', 4000);
+                console.error(err);
+                showError(err, 'Failed to play next');
             } finally { setLoading(false); }
         }
         return;
     }
     setLoading(true);
+    els.keyBanner.hidden = true;
     try {
         const parsed = parseInput(value);
-        if (!parsed) { flashStatus('Could not understand that input', 'error'); return; }
+        if (!parsed) {
+            setStatus('Could not understand that input', 'error');
+            return;
+        }
         setStatus('Resolving channel…');
         const channel = await resolveToChannel(parsed);
         if (!channel || !channel.ucid) {
-            flashStatus('Channel not found. Try another URL or name.', 'error', 4000);
+            setStatus('Channel not found. Try another URL or name.', 'error', { withDetails: true });
+            maybeShowKeyBanner();
             return;
         }
         channels.upsert(channel.ucid, channel.title);
@@ -243,20 +294,22 @@ async function handleSubmit(rawValue) {
         els.input.value = '';
     } catch (err) {
         console.error(err);
-        flashStatus(err.message || 'Something went wrong', 'error', 4000);
+        showError(err, 'Something went wrong');
     } finally {
         setLoading(false);
     }
 }
 
 // ---------- Settings dialog ----------
-function openSettings() {
+function openSettings({ focusKey = false } = {}) {
     const cfg = settings.load();
     els.optAvoidWatched.checked = !!cfg.avoidWatched;
     els.optCacheDays.value = String(cfg.cacheDays);
     els.optApiKey.value = apiKey.get();
+    els.optCorsProxy.checked = cfg.useCorsProxy !== false;
     if (typeof els.dialog.showModal === 'function') els.dialog.showModal();
     else els.dialog.setAttribute('open', '');
+    if (focusKey) setTimeout(() => els.optApiKey.focus(), 50);
 }
 
 function saveSettings() {
@@ -264,8 +317,16 @@ function saveSettings() {
     settings.save({
         avoidWatched: els.optAvoidWatched.checked,
         cacheDays: Number.isFinite(days) ? days : 1,
+        useCorsProxy: els.optCorsProxy.checked,
     });
     apiKey.set(els.optApiKey.value.trim());
+    if (api.youtube.enabled()) els.keyBanner.hidden = true;
+}
+
+function openErrorsDialog() {
+    renderErrorsLog();
+    if (typeof els.errorsDialog.showModal === 'function') els.errorsDialog.showModal();
+    else els.errorsDialog.setAttribute('open', '');
 }
 
 // ---------- Keyboard shortcuts ----------
@@ -323,10 +384,13 @@ function boot() {
     els.skipBtn.addEventListener('click', () => handleSubmit(''));
     els.themeToggle.addEventListener('click', toggleTheme);
 
-    els.settingsBtn.addEventListener('click', openSettings);
+    els.settingsBtn.addEventListener('click', () => openSettings());
     els.dialog.addEventListener('close', () => {
         if (els.dialog.returnValue === 'save') saveSettings();
     });
+    els.statusDetailsBtn.addEventListener('click', openErrorsDialog);
+    els.errorsClear.addEventListener('click', () => { api.clearErrorLog(); renderErrorsLog(); });
+    els.keyBannerAdd.addEventListener('click', () => openSettings({ focusKey: true }));
     els.btnClearHistory.addEventListener('click', () => {
         history.clear();
         flashStatus('Watch history cleared', 'success');

@@ -35,6 +35,25 @@ const DEFAULT_PIPED = [
 
 const REQUEST_TIMEOUT_MS = 8000;
 
+// CORS-anywhere style proxies. Used as a fallback when a direct request fails
+// with a network/CORS error. Each entry is a function that wraps the target
+// URL. Order = preference. User can disable via settings.
+const CORS_PROXIES = [
+    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+
+// Ring buffer of recent error attempts, exposed to the UI for diagnostics.
+const errorLog = [];
+const ERROR_LOG_MAX = 50;
+function logError(entry) {
+    errorLog.unshift({ ...entry, ts: Date.now() });
+    if (errorLog.length > ERROR_LOG_MAX) errorLog.length = ERROR_LOG_MAX;
+}
+function getErrorLog() { return errorLog.slice(); }
+function clearErrorLog() { errorLog.length = 0; }
+
 function loadCustomInstances() {
     try {
         const raw = localStorage.getItem('ytrandi:instances');
@@ -91,7 +110,16 @@ function markHealthy(host) {
     if (h[host]) { delete h[host]; saveHealth(h); }
 }
 
-async function fetchJson(url, opts = {}) {
+function corsProxiesEnabled() {
+    try {
+        const cfg = JSON.parse(localStorage.getItem('ytrandi:settings') || '{}');
+        return cfg.useCorsProxy !== false; // default: enabled
+    } catch {
+        return true;
+    }
+}
+
+async function fetchJsonDirect(url, opts = {}) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), opts.timeout || REQUEST_TIMEOUT_MS);
     try {
@@ -103,8 +131,30 @@ async function fetchJson(url, opts = {}) {
     }
 }
 
+// Try the URL directly; on TypeError (CORS/network) or AbortError (timeout),
+// fall back through CORS proxies. 4xx/5xx responses are NOT proxied since the
+// proxy would just relay the same status — those bubble up immediately.
+async function fetchJson(url, opts = {}) {
+    try {
+        return await fetchJsonDirect(url, opts);
+    } catch (err) {
+        const isNetworkError = err.name === 'TypeError' || err.name === 'AbortError';
+        if (!isNetworkError || !corsProxiesEnabled()) throw err;
+        let lastErr = err;
+        for (const wrap of CORS_PROXIES) {
+            try {
+                const proxied = wrap(url);
+                return await fetchJsonDirect(proxied, opts);
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        throw lastErr;
+    }
+}
+
 // Try a function across an ordered instance list, returning the first success.
-async function tryInstances(kind, fn) {
+async function tryInstances(kind, fn, opName = '?') {
     const instances = getInstances(kind);
     const ordered = [...instances].sort((a, b) => Number(isUnhealthy(a)) - Number(isUnhealthy(b)));
     let lastErr;
@@ -116,9 +166,10 @@ async function tryInstances(kind, fn) {
         } catch (err) {
             markUnhealthy(base);
             lastErr = err;
+            logError({ backend: kind, op: opName, instance: base, message: err.message || String(err) });
         }
     }
-    throw new Error(`All ${kind} instances failed: ${lastErr ? lastErr.message : 'unknown'}`);
+    throw new Error(`All ${kind} instances failed for ${opName}: ${lastErr ? lastErr.message : 'unknown'}`);
 }
 
 // ---------- Invidious endpoints ----------
@@ -127,36 +178,35 @@ const invidious = {
     async resolveUrl(youtubeUrl) {
         return (await tryInstances('invidious', base =>
             fetchJson(`${base}/api/v1/resolveurl?url=${encodeURIComponent(youtubeUrl)}`)
-        )).result;
+        , 'resolveUrl')).result;
     },
 
     async videoMeta(videoId) {
         return (await tryInstances('invidious', base =>
             fetchJson(`${base}/api/v1/videos/${encodeURIComponent(videoId)}?fields=videoId,title,authorId,author`)
-        )).result;
+        , 'videoMeta')).result;
     },
 
     async searchChannels(query) {
         return (await tryInstances('invidious', base =>
             fetchJson(`${base}/api/v1/search?q=${encodeURIComponent(query)}&type=channel`)
-        )).result;
+        , 'searchChannels')).result;
     },
 
     async channelMeta(ucid) {
         return (await tryInstances('invidious', base =>
             fetchJson(`${base}/api/v1/channels/${encodeURIComponent(ucid)}?fields=author,authorId,authorThumbnails,subCount`)
-        )).result;
+        , 'channelMeta')).result;
     },
 
-    // Returns { videos: [{videoId,title,lengthSeconds,viewCount,published}], continuation }
     async channelVideos(ucid, continuation) {
         const url = base => {
             const params = new URLSearchParams({ sort_by: 'newest' });
             if (continuation) params.set('continuation', continuation);
             return `${base}/api/v1/channels/${encodeURIComponent(ucid)}/videos?${params}`;
         };
-        const { result } = await tryInstances('invidious', base => fetchJson(url(base)));
-        // Newer Invidious returns {videos:[],continuation}, older returns array
+        const { result } = await tryInstances('invidious',
+            base => fetchJson(url(base)), 'channelVideos');
         if (Array.isArray(result)) return { videos: result, continuation: null };
         return { videos: result.videos || [], continuation: result.continuation || null };
     },
@@ -180,25 +230,25 @@ const piped = {
     async resolveUrl(youtubeUrl) {
         return (await tryInstances('piped', base =>
             fetchJson(`${base}/resolveurl?url=${encodeURIComponent(youtubeUrl)}`)
-        )).result;
+        , 'resolveUrl')).result;
     },
 
     async videoMeta(videoId) {
         return (await tryInstances('piped', base =>
             fetchJson(`${base}/streams/${encodeURIComponent(videoId)}`)
-        )).result;
+        , 'videoMeta')).result;
     },
 
     async searchChannels(query) {
         return (await tryInstances('piped', base =>
             fetchJson(`${base}/search?q=${encodeURIComponent(query)}&filter=channels`)
-        )).result;
+        , 'searchChannels')).result;
     },
 
     async channelMeta(ucid) {
         return (await tryInstances('piped', base =>
             fetchJson(`${base}/channel/${encodeURIComponent(ucid)}`)
-        )).result;
+        , 'channelMeta')).result;
     },
 
     async channelVideos(ucid, nextpage) {
@@ -206,12 +256,12 @@ const piped = {
         if (nextpage) {
             const r = await tryInstances('piped', base =>
                 fetchJson(`${base}/nextpage/channel/${encodeURIComponent(ucid)}?nextpage=${encodeURIComponent(nextpage)}`)
-            );
+            , 'channelVideos');
             result = r.result; instance = r.instance;
         } else {
             const r = await tryInstances('piped', base =>
                 fetchJson(`${base}/channel/${encodeURIComponent(ucid)}`)
-            );
+            , 'channelVideos');
             result = r.result; instance = r.instance;
         }
         const streams = result.relatedStreams || [];
@@ -237,7 +287,12 @@ const youtube = {
         Object.entries({ ...params, key: this.key() }).forEach(([k, v]) => {
             if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
         });
-        return fetchJson(url.toString());
+        try {
+            return await fetchJson(url.toString());
+        } catch (err) {
+            logError({ backend: 'youtube', op: path, instance: 'googleapis.com', message: err.message || String(err) });
+            throw err;
+        }
     },
 
     async resolveByHandle(handle) {
@@ -292,8 +347,8 @@ const youtube = {
 
 async function withFallback(operation) {
     const order = [
-        { name: 'invidious', fn: invidious[operation.name] },
         { name: 'piped',     fn: piped[operation.name] },
+        { name: 'invidious', fn: invidious[operation.name] },
     ];
     if (youtube.enabled() && youtube[operation.name]) {
         order.push({ name: 'youtube', fn: youtube[operation.name] });
@@ -319,4 +374,5 @@ export const api = {
     invidious, piped, youtube, withFallback,
     DEFAULT_INVIDIOUS, DEFAULT_PIPED,
     ucidFromPipedUrl,
+    getErrorLog, clearErrorLog,
 };
