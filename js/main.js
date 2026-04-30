@@ -82,13 +82,18 @@ function maybeShowKeyBanner() {
     if (api.youtube.enabled()) { els.keyBanner.hidden = true; return; }
     const log = api.getErrorLog();
     if (!log.length) return;
-    // Show banner only when we've seen failures across both public backends
-    // recently (last 2 minutes).
-    const recent = log.filter(e => Date.now() - e.ts < 120 * 1000);
-    const kinds = new Set(recent.map(e => e.backend));
+    // Only show when failures are logged for BOTH public backends in the
+    // current operation window (the log is cleared at the start of each
+    // user-triggered request, so any entry here is from the current run).
+    const kinds = new Set(log.map(e => e.backend));
     if (kinds.has('invidious') && kinds.has('piped')) {
         els.keyBanner.hidden = false;
     }
+}
+
+function startRun() {
+    api.clearErrorLog();
+    els.keyBanner.hidden = true;
 }
 
 function renderErrorsLog() {
@@ -242,6 +247,7 @@ function renderChannels() {
             if (state.isLoading) return;
             try {
                 setLoading(true);
+                startRun();
                 channels.upsert(c.ucid, c.title);
                 await pickAndPlayRandom({ ucid: c.ucid, title: c.title });
                 renderChannels();
@@ -264,7 +270,7 @@ async function handleSubmit(rawValue) {
         if (state.currentChannel) {
             try {
                 setLoading(true);
-                els.keyBanner.hidden = true;
+                startRun();
                 await pickAndPlayRandom(state.currentChannel);
             } catch (err) {
                 console.error(err);
@@ -274,7 +280,7 @@ async function handleSubmit(rawValue) {
         return;
     }
     setLoading(true);
-    els.keyBanner.hidden = true;
+    startRun();
     try {
         const parsed = parseInput(value);
         if (!parsed) {
