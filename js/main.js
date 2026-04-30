@@ -143,9 +143,10 @@ function createPlayer() {
             },
             onStateChange: (e) => {
                 if (e.data === YT.PlayerState.ENDED && state.currentChannel) {
+                    startRun();
                     pickAndPlayRandom(state.currentChannel).catch(err => {
                         console.error(err);
-                        flashStatus(err.message || 'Failed to play next', 'error', 4000);
+                        showError(err, 'Failed to play next');
                     });
                 }
             },

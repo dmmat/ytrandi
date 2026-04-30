@@ -165,17 +165,26 @@ export async function loadChannelVideos(ucid, { minVideos = 200, hardMaxPages = 
             const seen = new Set();
             let cont = null;
             for (let page = 0; page < hardMaxPages; page++) {
-                const { videos, continuation } = await b.call(ucid, cont);
-                if (!videos || videos.length === 0) break;
-                for (const v of videos) {
-                    if (v.videoId && !seen.has(v.videoId)) {
-                        seen.add(v.videoId);
-                        all.push(v);
+                try {
+                    const { videos, continuation } = await b.call(ucid, cont);
+                    if (!videos || videos.length === 0) break;
+                    for (const v of videos) {
+                        if (v.videoId && !seen.has(v.videoId)) {
+                            seen.add(v.videoId);
+                            all.push(v);
+                        }
                     }
+                    if (all.length >= minVideos) break;
+                    if (!continuation) break;
+                    cont = continuation;
+                } catch (pageErr) {
+                    // Pagination broke (e.g. Piped /nextpage/channel often
+                    // fails). If we already have some videos, keep them
+                    // instead of failing over to a different backend.
+                    if (all.length === 0) throw pageErr;
+                    console.warn(`[ytrandi] ${b.name}.channelVideos pagination stopped:`, pageErr.message);
+                    break;
                 }
-                if (all.length >= minVideos) break;
-                if (!continuation) break;
-                cont = continuation;
             }
             if (all.length > 0) return { videos: all, backend: b.name };
             lastErr = new Error('empty');
