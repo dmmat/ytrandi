@@ -37,6 +37,12 @@ html[data-theme="light"] {
 
 * { box-sizing: border-box; }
 
+/* The HTML `hidden` attribute has the same specificity as a class selector
+ * (0,0,1,0). Several rules below set `display: flex` on classes that may
+ * also carry `hidden`, which would silently win on source order. Force the
+ * attribute to take precedence. */
+[hidden] { display: none !important; }
+
 html, body {
     margin: 0;
     padding: 0;
