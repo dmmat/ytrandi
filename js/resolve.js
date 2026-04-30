@@ -1,5 +1,8 @@
 // Turn a parsed input into a concrete channel { ucid, title, thumbnail? }.
 // Uses the unified api layer so it transparently falls back across backends.
+//
+// Order: Piped first (most reliable in practice + better CORS support),
+// Invidious second, then optional YouTube Data API key.
 
 import { api } from './api.js';
 
@@ -23,34 +26,33 @@ function pickUcidFromPipedResolve(data) {
 
 async function resolveByUrl(youtubeUrl) {
     try {
-        const data = await api.invidious.resolveUrl(youtubeUrl);
-        const ucid = pickUcidFromInvidiousResolve(data);
-        if (ucid) return ucid;
-    } catch (e) {
-        console.warn('[ytrandi] invidious.resolveUrl failed:', e.message);
-    }
-    try {
         const data = await api.piped.resolveUrl(youtubeUrl);
         const ucid = pickUcidFromPipedResolve(data);
         if (ucid) return ucid;
     } catch (e) {
         console.warn('[ytrandi] piped.resolveUrl failed:', e.message);
     }
+    try {
+        const data = await api.invidious.resolveUrl(youtubeUrl);
+        const ucid = pickUcidFromInvidiousResolve(data);
+        if (ucid) return ucid;
+    } catch (e) {
+        console.warn('[ytrandi] invidious.resolveUrl failed:', e.message);
+    }
     return null;
 }
 
 async function resolveVideoToChannel(videoId) {
-    // Try Invidious first
-    try {
-        const v = await api.invidious.videoMeta(videoId);
-        if (v && v.authorId) return { ucid: v.authorId, title: v.author };
-    } catch {}
     try {
         const v = await api.piped.videoMeta(videoId);
         if (v) {
             const ucid = api.ucidFromPipedUrl(v.uploaderUrl);
             if (ucid) return { ucid, title: v.uploader };
         }
+    } catch {}
+    try {
+        const v = await api.invidious.videoMeta(videoId);
+        if (v && v.authorId) return { ucid: v.authorId, title: v.author };
     } catch {}
     if (api.youtube.enabled()) {
         try {
@@ -65,11 +67,6 @@ async function resolveVideoToChannel(videoId) {
 
 async function searchTopChannel(query) {
     try {
-        const items = await api.invidious.searchChannels(query);
-        const first = (items || []).find(x => x.type === 'channel') || (items || [])[0];
-        if (first && first.authorId) return { ucid: first.authorId, title: first.author };
-    } catch {}
-    try {
         const data = await api.piped.searchChannels(query);
         const items = data.items || [];
         const first = items[0];
@@ -77,6 +74,11 @@ async function searchTopChannel(query) {
             const ucid = api.ucidFromPipedUrl(first.url);
             if (ucid) return { ucid, title: first.name };
         }
+    } catch {}
+    try {
+        const items = await api.invidious.searchChannels(query);
+        const first = (items || []).find(x => x.type === 'channel') || (items || [])[0];
+        if (first && first.authorId) return { ucid: first.authorId, title: first.author };
     } catch {}
     if (api.youtube.enabled()) {
         try {
@@ -93,12 +95,12 @@ async function searchTopChannel(query) {
 async function fillTitle(channel) {
     if (channel.title) return channel;
     try {
-        const m = await api.invidious.channelMeta(channel.ucid);
-        if (m && m.author) return { ...channel, title: m.author };
-    } catch {}
-    try {
         const m = await api.piped.channelMeta(channel.ucid);
         if (m && m.name) return { ...channel, title: m.name };
+    } catch {}
+    try {
+        const m = await api.invidious.channelMeta(channel.ucid);
+        if (m && m.author) return { ...channel, title: m.author };
     } catch {}
     return { ...channel, title: channel.ucid };
 }
@@ -149,8 +151,8 @@ export async function resolveToChannel(parsed) {
 // backend that we successfully started with). Returns array of {videoId,title,...}.
 export async function loadChannelVideos(ucid, { minVideos = 200, hardMaxPages = 8 } = {}) {
     const backends = [
-        { name: 'invidious', call: api.invidious.channelVideos.bind(api.invidious) },
         { name: 'piped',     call: api.piped.channelVideos.bind(api.piped) },
+        { name: 'invidious', call: api.invidious.channelVideos.bind(api.invidious) },
     ];
     if (api.youtube.enabled()) {
         backends.push({ name: 'youtube', call: api.youtube.channelVideos.bind(api.youtube) });

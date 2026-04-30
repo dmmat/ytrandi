@@ -347,8 +347,8 @@ const youtube = {
 
 async function withFallback(operation) {
     const order = [
-        { name: 'invidious', fn: invidious[operation.name] },
         { name: 'piped',     fn: piped[operation.name] },
+        { name: 'invidious', fn: invidious[operation.name] },
     ];
     if (youtube.enabled() && youtube[operation.name]) {
         order.push({ name: 'youtube', fn: youtube[operation.name] });
